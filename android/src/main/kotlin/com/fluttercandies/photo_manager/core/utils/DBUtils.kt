@@ -4,12 +4,15 @@ import android.content.ContentValues
 import android.content.Context
 import android.provider.BaseColumns._ID
 import android.provider.MediaStore
+import android.provider.MediaStore.MediaColumns.MIME_TYPE
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import com.fluttercandies.photo_manager.core.PhotoManager
 import com.fluttercandies.photo_manager.core.entity.AssetEntity
 import com.fluttercandies.photo_manager.core.entity.AssetPathEntity
 import com.fluttercandies.photo_manager.core.entity.filter.FilterOption
+import com.fluttercandies.photo_manager.core.utils.AndroidQDBUtils.logQuery
+import com.fluttercandies.photo_manager.core.utils.AndroidQDBUtils.toAssetEntity
 import java.io.File
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -140,6 +143,9 @@ object DBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
+        if(pathId == PhotoManager.PDF_ID){
+            return getPdfListPaged(context, pathId, page, size, requestType, option)
+        }
         val isAll = pathId.isEmpty()
         val list = ArrayList<AssetEntity>()
         val args = ArrayList<String>()
@@ -171,6 +177,105 @@ object DBUtils : IDBUtils {
         return list
     }
 
+    override fun getPdfPath(
+        context: Context,
+        requestType: Int,
+        option: FilterOption
+    ): AssetPathEntity {
+        val selection = "$MIME_TYPE = ?"
+        val args = arrayOf("application/pdf")
+        val projection = arrayOf(
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.DATA,
+            MediaStore.Files.FileColumns.TITLE
+        )
+
+
+        val cursor =  context.contentResolver.logQuery(
+            allUri,
+            projection,
+            selection,
+            args,
+            null
+        )
+
+        val entity = cursor.run {
+            val assetCount =  this?.count ?: 0
+            AssetPathEntity(PhotoManager.PDF_ID, PhotoManager.PDF_ALBUM_NAME, assetCount, requestType, isPdf = true)
+        }
+
+        return entity
+    }
+
+    override fun getPdfListPaged(
+        context: Context,
+        pathId: String,
+        page: Int,
+        size: Int,
+        requestType: Int,
+        option: FilterOption
+    ): List<AssetEntity> {
+
+        val list = ArrayList<AssetEntity>()
+        val selection = "$MIME_TYPE = ?"
+        val args = arrayOf("application/pdf")
+        val sortOrder = getSortOrder(page * size, size, option)
+        val cursor = context.contentResolver.logQuery(
+            allUri,
+            keys(),
+            selection,
+            args,
+            sortOrder
+        ) ?: return list
+
+        cursor.use {
+            while (it.moveToNext()) {
+                it.toAssetEntity(context)?.apply {
+                    list.add(this)
+                }
+            }
+        }
+
+        return list
+    }
+
+    override fun getPdfListRange(
+        context: Context,
+        galleryId: String,
+        start: Int,
+        end: Int,
+        requestType: Int,
+        option: FilterOption
+    ): List<AssetEntity> {
+
+        val list = ArrayList<AssetEntity>()
+
+        val selection = "$MIME_TYPE = ?"
+        val args = arrayOf("application/pdf")
+
+        val pageSize = end - start
+        val sortOrder = getSortOrder(start, pageSize, option)
+
+        val cursor =  context.contentResolver.logQuery(
+            allUri,
+            keys(),
+            selection,
+            args,
+            sortOrder
+        ) ?: return list
+
+        cursor.use {
+            while (it.moveToNext()) {
+                it.toAssetEntity(context)?.apply {
+                    list.add(this)
+                }
+            }
+        }
+
+
+        return list
+    }
+
     override fun getAssetListRange(
         context: Context,
         galleryId: String,
@@ -179,6 +284,10 @@ object DBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
+        if(galleryId == PhotoManager.PDF_ID){
+            return getPdfListRange(context, galleryId, start, end, requestType, option)
+        }
+
         val isAll = galleryId.isEmpty()
         val list = ArrayList<AssetEntity>()
         val args = ArrayList<String>()

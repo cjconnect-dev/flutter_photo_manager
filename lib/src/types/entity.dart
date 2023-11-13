@@ -27,10 +27,12 @@ class AssetPathEntity {
   AssetPathEntity({
     required this.id,
     required this.name,
+    @Deprecated('Use assetCountAsync instead. This will be removed in 3.0.0') this.assetCount = 0,
     this.albumType = 1,
     this.lastModified,
     this.type = RequestType.common,
     this.isAll = false,
+    this.isPdf = false,
     PMFilter? filterOption,
     this.darwinSubtype,
     this.darwinType,
@@ -91,6 +93,11 @@ class AssetPathEntity {
   ///
   /// An album includes all assets is the default album in general.
   final bool isAll;
+
+  /// Whether the album contains only pdf files.
+  ///
+  /// an album includes only pdf files is the default album in general.
+  final bool isPdf;
 
   /// The collection of filter options of the album.
   final PMFilter filterOption;
@@ -300,12 +307,7 @@ class AssetPathEntity {
 
   @override
   int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      albumType.hashCode ^
-      type.hashCode ^
-      lastModified.hashCode ^
-      isAll.hashCode;
+      id.hashCode ^ name.hashCode ^ albumType.hashCode ^ type.hashCode ^ lastModified.hashCode ^ isAll.hashCode;
 
   @override
   String toString() {
@@ -353,8 +355,7 @@ class AssetEntity {
 
   /// Refresh the property of [AssetPathEntity] from the given ID.
   static Future<AssetEntity?> _obtainAssetFromId(String id) async {
-    final Map<dynamic, dynamic>? result =
-        await plugin.fetchEntityProperties(id);
+    final Map<dynamic, dynamic>? result = await plugin.fetchEntityProperties(id);
     if (result == null) {
       return null;
     }
@@ -385,8 +386,7 @@ class AssetEntity {
   Future<String> get titleAsync => plugin.getTitleAsync(this);
 
   /// {@macro photo_manager.AssetEntity.titleAsync}
-  Future<String> get titleAsyncWithSubtype =>
-      plugin.getTitleAsync(this, subtype: subtype);
+  Future<String> get titleAsyncWithSubtype => plugin.getTitleAsync(this, subtype: subtype);
 
   /// {@macro photo_manager.AssetType}
   AssetType get type => AssetType.values[typeInt];
@@ -684,8 +684,7 @@ class AssetEntity {
     return null;
   }
 
-  bool get _platformMatched =>
-      Platform.isIOS || Platform.isMacOS || Platform.isAndroid;
+  bool get _platformMatched => Platform.isIOS || Platform.isMacOS || Platform.isAndroid;
 
   Future<File?> _getFile({
     bool isOrigin = false,
@@ -721,8 +720,7 @@ class AssetEntity {
     if (!_platformMatched) {
       return null;
     }
-    if (Platform.isAndroid &&
-        int.parse(await plugin.getSystemVersion()) >= 29) {
+    if (Platform.isAndroid && int.parse(await plugin.getSystemVersion()) >= 29) {
       return plugin.getOriginBytes(id, progressHandler: progressHandler);
     }
     final File? file = await originFile;

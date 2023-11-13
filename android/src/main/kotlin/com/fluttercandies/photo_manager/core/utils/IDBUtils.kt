@@ -82,6 +82,17 @@ interface IDBUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(DATE_TAKEN) // 拍摄时间
         }
 
+        val storePdfKeys = mutableListOf(
+            DISPLAY_NAME,
+            DATA,
+            _ID,
+            TITLE,
+            BUCKET_ID,
+            BUCKET_DISPLAY_NAME,
+            DATE_MODIFIED,
+            MIME_TYPE,
+        )
+
         val typeKeys = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.Images.Media.DISPLAY_NAME
@@ -118,6 +129,30 @@ interface IDBUtils {
     ): List<AssetEntity>
 
     fun getAssetListRange(
+        context: Context,
+        galleryId: String,
+        start: Int,
+        end: Int,
+        requestType: Int,
+        option: FilterOption
+    ): List<AssetEntity>
+
+    fun getPdfPath(
+        context: Context,
+        requestType: Int = 0,
+        option: FilterOption
+    ): AssetPathEntity
+
+    fun getPdfListPaged(
+        context: Context,
+        pathId: String,
+        page: Int,
+        size: Int,
+        requestType: Int = 0,
+        option: FilterOption,
+    ): List<AssetEntity>
+
+    fun getPdfListRange(
         context: Context,
         galleryId: String,
         start: Int,

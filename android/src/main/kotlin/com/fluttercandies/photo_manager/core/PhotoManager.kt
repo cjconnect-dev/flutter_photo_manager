@@ -25,6 +25,8 @@ class PhotoManager(private val context: Context) {
     companion object {
         const val ALL_ID = "isAll"
         const val ALL_ALBUM_NAME = "Recent"
+        const val PDF_ID = "isPDF"
+        const val PDF_ALBUM_NAME = "PDF"
 
         private val threadPool = Executors.newFixedThreadPool(5)
     }
@@ -46,9 +48,13 @@ class PhotoManager(private val context: Context) {
         if (onlyAll) {
             return dbUtils.getMainAssetPathEntity(context, type, option)
         }
+
+        val pdfPathEntity =  dbUtils.getPdfPath(context, type, option)
+
         val fromDb = dbUtils.getAssetPathList(context, type, option)
+
         if (!hasAll) {
-            return fromDb
+            return listOf(pdfPathEntity) + fromDb
         }
         // make is all to the gallery list
         val entity = fromDb.run {
@@ -59,7 +65,7 @@ class PhotoManager(private val context: Context) {
             AssetPathEntity(ALL_ID, ALL_ALBUM_NAME, assetCount, type, true)
         }
 
-        return listOf(entity) + fromDb
+        return listOf(entity) + fromDb + pdfPathEntity
     }
 
     fun getAssetListPaged(
@@ -69,8 +75,7 @@ class PhotoManager(private val context: Context) {
         size: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        val gId = if (id == ALL_ID) "" else id
-        return dbUtils.getAssetListPaged(context, gId, page, size, typeInt, option)
+        return dbUtils.getAssetListPaged(context, id, page, size, typeInt, option)
     }
 
     fun getAssetListRange(
@@ -80,8 +85,7 @@ class PhotoManager(private val context: Context) {
         end: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        val gId = if (galleryId == ALL_ID) "" else galleryId
-        return dbUtils.getAssetListRange(context, gId, start, end, type, option)
+        return dbUtils.getAssetListRange(context, galleryId, start, end, type, option)
     }
 
     fun getThumb(id: String, option: ThumbLoadOption, resultHandler: ResultHandler) {
@@ -152,6 +156,15 @@ class PhotoManager(private val context: Context) {
                     }
                 }
             }
+        }
+
+        if(id == PDF_ID){
+            return dbUtils.getPdfPath(context, type, option).apply {
+                if(option.containsPathModified){
+                    dbUtils.injectModifiedDate(context, this)
+                }
+            }
+
         }
         val galleryEntity = dbUtils.getAssetPathEntityFromId(context, id, type, option)
         if (galleryEntity != null && option.containsPathModified) {

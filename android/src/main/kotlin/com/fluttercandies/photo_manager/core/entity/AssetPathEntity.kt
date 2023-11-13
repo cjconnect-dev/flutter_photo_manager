@@ -6,5 +6,6 @@ data class AssetPathEntity(
     var assetCount: Int,
     val typeInt: Int,
     var isAll: Boolean = false,
+    val isPdf: Boolean = false,
     var modifiedDate: Long? = null
 )
