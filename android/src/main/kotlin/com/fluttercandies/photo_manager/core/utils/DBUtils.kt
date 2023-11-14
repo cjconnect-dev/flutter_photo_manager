@@ -39,7 +39,9 @@ object DBUtils : IDBUtils {
         val where = option.makeWhere(requestType, args)
 //        val where = makeWhere(requestType, option, args)
         val selection =
-            "${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where) GROUP BY (${MediaStore.MediaColumns.BUCKET_ID}"
+            "${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?) GROUP BY (${MediaStore.MediaColumns.BUCKET_ID}"
+        args.add("application/pdf")
+
         val cursor = context.contentResolver.logQuery(
             allUri,
             IDBUtils.storeBucketKeys + arrayOf("count(1)"),
@@ -73,8 +75,8 @@ object DBUtils : IDBUtils {
         val args = ArrayList<String>()
         val where = option.makeWhere(requestType, args)
         val selections =
-            "${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where"
-
+            "(${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
+        args.add("application/pdf")
         val cursor = context.contentResolver.logQuery(
             allUri,
             projection,
@@ -143,7 +145,7 @@ object DBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        if(pathId == PhotoManager.PDF_ID){
+        if (pathId == PhotoManager.PDF_ID) {
             return getPdfListPaged(context, pathId, page, size, requestType, option)
         }
         val isAll = pathId.isEmpty()
@@ -155,10 +157,15 @@ object DBUtils : IDBUtils {
         val where = option.makeWhere(requestType, args)
         val keys = keys()
         val selection = if (isAll) {
-            "${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where"
+            "(${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
         } else {
             "${MediaStore.MediaColumns.BUCKET_ID} = ? $where"
         }
+
+        if(isAll){
+            args.add("application/pdf")
+        }
+
         val sortOrder = getSortOrder(page * size, size, option)
         val cursor = context.contentResolver.logQuery(
             allUri,
@@ -191,7 +198,7 @@ object DBUtils : IDBUtils {
         )
 
 
-        val cursor =  context.contentResolver.logQuery(
+        val cursor = context.contentResolver.logQuery(
             allUri,
             projection,
             selection,
@@ -200,8 +207,14 @@ object DBUtils : IDBUtils {
         )
 
         val entity = cursor.run {
-            val assetCount =  this?.count ?: 0
-            AssetPathEntity(PhotoManager.PDF_ID, PhotoManager.PDF_ALBUM_NAME, assetCount, requestType, isPdf = true)
+            val assetCount = this?.count ?: 0
+            AssetPathEntity(
+                PhotoManager.PDF_ID,
+                PhotoManager.PDF_ALBUM_NAME,
+                assetCount,
+                requestType,
+                isPdf = true
+            )
         }
 
         return entity
@@ -256,7 +269,7 @@ object DBUtils : IDBUtils {
         val pageSize = end - start
         val sortOrder = getSortOrder(start, pageSize, option)
 
-        val cursor =  context.contentResolver.logQuery(
+        val cursor = context.contentResolver.logQuery(
             allUri,
             keys(),
             selection,
@@ -284,7 +297,7 @@ object DBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        if(galleryId == PhotoManager.PDF_ID){
+        if (galleryId == PhotoManager.PDF_ID) {
             return getPdfListRange(context, galleryId, start, end, requestType, option)
         }
 
@@ -298,10 +311,15 @@ object DBUtils : IDBUtils {
         val keys = keys()
 
         val selection = if (isAll) {
-            "${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where"
+            "(${MediaStore.MediaColumns.BUCKET_ID} IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
         } else {
             "${MediaStore.MediaColumns.BUCKET_ID} = ? $where"
         }
+
+        if(isAll){
+            args.add("application/pdf")
+        }
+
         val pageSize = end - start
         val sortOrder = getSortOrder(start, pageSize, option)
         val cursor = context.contentResolver.logQuery(

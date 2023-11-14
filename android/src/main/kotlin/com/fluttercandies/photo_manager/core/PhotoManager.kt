@@ -49,7 +49,7 @@ class PhotoManager(private val context: Context) {
             return dbUtils.getMainAssetPathEntity(context, type, option)
         }
 
-        val pdfPathEntity =  dbUtils.getPdfPath(context, type, option)
+        val pdfPathEntity = dbUtils.getPdfPath(context, type, option)
 
         val fromDb = dbUtils.getAssetPathList(context, type, option)
 
@@ -75,7 +75,8 @@ class PhotoManager(private val context: Context) {
         size: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        return dbUtils.getAssetListPaged(context, id, page, size, typeInt, option)
+        val gId = if (id == ALL_ID) "" else id
+        return dbUtils.getAssetListPaged(context, gId, page, size, typeInt, option)
     }
 
     fun getAssetListRange(
@@ -85,7 +86,8 @@ class PhotoManager(private val context: Context) {
         end: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        return dbUtils.getAssetListRange(context, galleryId, start, end, type, option)
+        val gId = if (galleryId == ALL_ID) "" else galleryId
+        return dbUtils.getAssetListRange(context, gId, start, end, type, option)
     }
 
     fun getThumb(id: String, option: ThumbLoadOption, resultHandler: ResultHandler) {
@@ -158,9 +160,9 @@ class PhotoManager(private val context: Context) {
             }
         }
 
-        if(id == PDF_ID){
+        if (id == PDF_ID) {
             return dbUtils.getPdfPath(context, type, option).apply {
-                if(option.containsPathModified){
+                if (option.containsPathModified) {
                     dbUtils.injectModifiedDate(context, this)
                 }
             }

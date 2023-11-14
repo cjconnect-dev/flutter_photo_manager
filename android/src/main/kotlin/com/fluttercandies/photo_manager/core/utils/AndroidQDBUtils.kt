@@ -42,7 +42,8 @@ object AndroidQDBUtils : IDBUtils {
         val args = ArrayList<String>()
         val where = option.makeWhere(requestType, args)
         val selections =
-            "$BUCKET_ID IS NOT NULL $where"
+            "($BUCKET_ID IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
+        args.add("application/pdf")
 
         val cursor = context.contentResolver.logQuery(
             allUri,
@@ -88,7 +89,8 @@ object AndroidQDBUtils : IDBUtils {
         val args = ArrayList<String>()
         val where = option.makeWhere(requestType, args)
         val selections =
-            "$BUCKET_ID IS NOT NULL $where"
+            "($BUCKET_ID IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
+        args.add("application/pdf")
 
         val cursor = context.contentResolver.logQuery(
             allUri,
@@ -141,9 +143,10 @@ object AndroidQDBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        if(pathId == PhotoManager.PDF_ID){
+        if (pathId == PhotoManager.PDF_ID) {
             return getPdfListPaged(context, pathId, page, size, requestType, option)
         }
+
         val isAll = pathId.isEmpty()
         val list = ArrayList<AssetEntity>()
         val args = ArrayList<String>()
@@ -152,10 +155,16 @@ object AndroidQDBUtils : IDBUtils {
         }
         val where = option.makeWhere(requestType, args)
         val selection = if (isAll) {
-            "$BUCKET_ID IS NOT NULL $where"
+            "($BUCKET_ID IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
         } else {
             "$BUCKET_ID = ? $where"
         }
+
+        if(isAll){
+            args.add("application/pdf")
+        }
+
+
         val sortOrder = getSortOrder(page * size, size, option)
         val cursor = context.contentResolver.logQuery(
             allUri,
@@ -165,6 +174,7 @@ object AndroidQDBUtils : IDBUtils {
             sortOrder
         ) ?: return list
         cursor.use {
+            val count = cursor.count
             cursorWithRange(it, page * size, size) { cursor ->
                 cursor.toAssetEntity(context)?.apply {
                     list.add(this)
@@ -182,7 +192,7 @@ object AndroidQDBUtils : IDBUtils {
         requestType: Int,
         option: FilterOption
     ): List<AssetEntity> {
-        if(galleryId == PhotoManager.PDF_ID){
+        if (galleryId == PhotoManager.PDF_ID) {
             return getPdfListRange(context, galleryId, start, end, requestType, option)
         }
 
@@ -194,10 +204,14 @@ object AndroidQDBUtils : IDBUtils {
         }
         val where = option.makeWhere(requestType, args)
         val selection = if (isAll) {
-            "$BUCKET_ID IS NOT NULL $where"
+            "($BUCKET_ID IS NOT NULL $where) OR (${MediaStore.Files.FileColumns.MIME_TYPE} = ?)"
         } else {
             "$BUCKET_ID = ? $where"
         }
+        if(isAll){
+            args.add("application/pdf")
+        }
+
         val pageSize = end - start
         val sortOrder = getSortOrder(start, pageSize, option)
         val cursor = context.contentResolver.logQuery(
@@ -226,7 +240,7 @@ object AndroidQDBUtils : IDBUtils {
         val selection = "${MediaStore.Files.FileColumns.MIME_TYPE} = ?"
         val args = arrayOf("application/pdf")
 
-        val cursor =  context.contentResolver.logQuery(
+        val cursor = context.contentResolver.logQuery(
             allUri,
             keys(),
             selection,
@@ -235,8 +249,14 @@ object AndroidQDBUtils : IDBUtils {
         )
 
         val entity = cursor.run {
-            val assetCount =  this?.count ?: 0
-            AssetPathEntity(PhotoManager.PDF_ID, PhotoManager.PDF_ALBUM_NAME, assetCount, requestType, isPdf = true)
+            val assetCount = this?.count ?: 0
+            AssetPathEntity(
+                PhotoManager.PDF_ID,
+                PhotoManager.PDF_ALBUM_NAME,
+                assetCount,
+                requestType,
+                isPdf = true
+            )
         }
 
         return entity
@@ -290,7 +310,7 @@ object AndroidQDBUtils : IDBUtils {
         val pageSize = end - start
         val sortOrder = getSortOrder(start, pageSize, option)
 
-        val cursor =  context.contentResolver.logQuery(
+        val cursor = context.contentResolver.logQuery(
             allUri,
             keys(),
             selection,
